@@ -1,11 +1,11 @@
 ---
 layout: post
 title:  Github Pages的使用
-categories: tools
+categories: Tools
 description: Github Pages的使用
-keywords: Github Pages, Blog
-
+keywords: github Pages, blog
 ---
+
 ## 使用Github Pages快速搭建自己的网站  
 参考[Github+Jekyll 搭建个人网站详细教程](https://www.jianshu.com/p/9f71e260925d)
 ### 最直接的方法
