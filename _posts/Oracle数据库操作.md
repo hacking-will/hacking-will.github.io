@@ -1,0 +1,252 @@
+---
+---
+---
+---
+---
+##Part 1 表的基本操作
+
+---
+### 建表
+```sql
+CREATE TABLE name
+( field1 type [default n] [constraint],
+	...
+  fieldn type [default n] [constraint]
+	[, constraint]
+)[AS subquery];
+```
+eg.
+```sql
+CREATE TABLE employees
+(
+	id      int PRIMARY KEY,
+	name    varchar(20),
+	gander  char(2) DEFAULT '男' CHECK(gander='男' or gander='女'),
+	salary  float CHECK(salary>=0),
+	rate    float CHECK(rate>=0 and rate<=1),
+	manager int,
+	CONSTRAINT fk_manager_id foreign key(manager) references employees(id)
+);
+
+CREATE TABLE department
+(
+	id       int,
+	name     varchar(20),
+	location varchar(50)
+);
+```
+修改表名称
+```sql
+rename department to departments;
+```
+### 修改表字段
+1. 增加字段
+```sql
+alter table employees
+	add (department int);
+```
+2. 修改字段
+```sql
+alter table employees
+	modify (department int );
+```
+3. 字段重命名
+```sql
+alter table employees
+	rename column  manager to manager_id;
+```
+4. 删除字段
+```sql
+alter table employees
+	drop column manager_id;
+```
+
+### 添加表/字段注释
+```sql
+comment on table employees
+	is '员工信息表';
+
+comment on column employees.id
+	is '员工工号';
+```
+
+---
+### 完整性约束
++ 非空约束 NOT NULL
++ 检查约束 CHECK
++ 唯一性约束 UNIQUE
++ 主键约束 PRIMARY KEY 
++ 外键约束 FORIEGN KEY
+
+---
+1. 添加约束
+```sql
+alter table departments
+	add constraint pk_department_location
+	primary key(location);
+```
+2. 修改约束
+```sql
+alter table departments
+	modify name not null;
+-- 对于unique\primary\foriegn往往都是先删除已有的再添加新的？？？
+```
+3. 重命名约束
+```sql
+alter table departments
+	rename constraint pk_department_location to pk_department_id;
+```
+4. 删除约束
+```sql
+alter table departments
+	drop constraint pk_department_id;
+```
+5. 无效化约束/激活约束
+```sql
+alter table departments
+	disable constraint pk_department_id;
+
+alter table departments
+	enable constraint pk_department_id;
+```
+
+---
+### 增删改查操作
+1. 插入  
+```sql
+INSERT INTO employees(id, name, gander, salary, manager)
+	VALUES(10, 'Jack', '男', 5780.99, null);
+--INSERT INTO employees AS subquery;
+```
+2. 更新
+```sql
+UPDATE employees SET name='Jack Ma',
+										 salary = 0.0
+								 WHERE id = 10;
+```
+3. 删除
+```sql
+DELETE FROM employees WHERE id = 10;
+```
+4. 查询
+```sql
+SELECT * FROM employees WHERE id = 10;
+
+-- Distinct
+-- Between ... and
+-- Like '_', '%' 
+-- Order by
+```
+5. 合并操作语句的使用
+```sql
+create table employees_copy
+as select * from employees where rownum < 0;
+
+merge into employees_copy EC
+using  employees E
+on (employees_copy.id = employees.id)
+when matched then
+	update set EC.name = E.name || '_update'
+when not matched then
+	insert values(E.id, E.name || '_insert', E.gander, E.manager_id E.salary);
+```
+
+---
+---
+---
+---
+---
+##Part 2 系统函数
+
+### 常用单行函数
+1. 数学函数
++ 绝对值abs 
+` 
+  SELECT ABS(-12) FROM dual; -- =>12
+`
++ 上取整ceil / 下取整floor 
+`
+  SELECT CEIL(23.4) FROM dual; --=>24
+  --
+  SELECT FLOOR(23.4) FROM dual; --=>23
+`
++ 四舍五入到指定位round
+`
+	SELECT ROUND(12345.12345) FROM dual;      -- 缺省 个位
+	SELECT ROUND(12345.12345, -2) FROM dual;  --小数点前两位 
+	SELECT ROUND(12345.12345, 2) FROM dual;   --小数点后两位 
+`
++ 截取指定部分trunc
+`
+  SELECT TRUNC(12345.12345) FROM dual;  
+  SELECT TRUNC(12345.12345, -2) FROM dual;  
+  SELECT TRUNC(12345.12345, 4) FROM dual;  
+`
+2. 字符串函数
++ 转大写upper/小写lower/首字母大写initcap
+`
+	SELECT UPPER('HEllo WoRld') FROM dual;  
+	--
+	SELECT LOWER('HEllo WoRld') FROM dual;  
+	--
+	SELECT INITCAP('HEllo WoRld') FROM dual;  
+`
++ 占位填充LPAD/RPAD
+`
+  SELECT LPAD('1234HGF', 10, '*') FROM dual;  
+  --
+  SELECT RPAD('1234HGF', 10, '*') FROM dual;  
+`
++ TO_CHAR / TO_NUMBER
+`
+	 SELECT TO_CHAR(SYSDATE, 'yyyy-MM-dd hh24:mm:ss AM') FROM dual;
+	 --
+	 SELECT TO_CHAR(123.122, 'L000,000.00') FROM dual; -- 9 / 0 / $ / L (本地货币) / . / ,(千位符)
+	 --
+	 SELECT TO_NUMBER('￥1234567.899', 'L999,999.99') FROM dual;  
+`
+3. 空值数据的操作
++ 空值替换NVL
+`
+ SELECT name,
+     salary,
+     NVL(rate, 0) rate,
+     (salary*12) + (salary * 12 * NVL(rate, 0)) AS t_salary
+     FROM employees;
+`
++ 空值替换NVL2(类似三目运算)
+`
+select  NVL2(manager_id, 'Have Manager', 'Haven''t Manager')
+          FROM employees;
+`
+
++ coalesce （列表中第一个非空的表达式是函数的返回值）
+`
+SELECT name,
+       COALESCE(rate, salary, 10) comm
+       FROM employees
+       ORDER BY rate; 
+`
+
+4. Case/Decode
+`
+ SELECT name, department, salary,
+           CASE department WHEN 'IT_PROG' THEN 1.10*salary
+                       WHEN 'ST_CLERK' THEN 1.15*salary
+                       WHEN 'SA_REP' THEN 1.2*salary
+                       ELSE salary
+           END AS "REVISED_SALARY"
+           FROM employees;
+--
+SELECT name, department, salary,
+       DECODE(department, 'IT_PROG',  1.10*salary,
+                      'ST_CLERK', 1.15*salary,
+                      'SA_REP',   1.2*salary,
+                       salary) AS "REVISED_SALARY"
+       FROM employees;
+`
+
+---
+### 组函数
++ 统计 AVG / SUM / COUNT / Max / Min
++ 分组 Grouping By / Having
