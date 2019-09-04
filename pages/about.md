@@ -8,7 +8,7 @@ menu: 关于
 permalink: /about/
 ---
 
-我是马壮，码而生，码而立。
+I'm hacking will，I like coding.
 
 仰慕「优雅编码的艺术」。
 
